@@ -1,0 +1,131 @@
+<input type="file" id="openDB" style="display:none">
+
+<script>
+    document.addEventListener('paste', (event) => {
+        const items = event.clipboardData.items;
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                const reader = new FileReader();
+
+                reader.onloadend = function() {
+                    const img = document.createElement('img');
+                    img.src = reader.result;
+                    img.style.maxWidth = '100%'; // Make the image responsive
+                    img.style.height = 'auto';
+                    img.alt = prompt("Please enter tags:");
+
+                    img.addEventListener('click', (event) => {
+                        let userInput = prompt("Please enter tags:", img.alt);
+                        if (userInput != null) {
+                            img.alt = userInput;
+                        }
+                    });
+
+                    document.body.appendChild(img);
+                };
+
+                reader.readAsDataURL(file);
+                event.preventDefault(); // Prevent default paste handling
+            }
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        // Check if the Ctrl (or Cmd on Mac) key is pressed along with 'S'
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault(); // Prevent the default save behavior
+            
+            const images = document.getElementsByTagName('img');
+            let raw_data = 'insta\n';
+
+            for (let i = 0; i < images.length; i++) {
+                raw_data += images[i].src + ' ' + images[i].alt + '\n';
+            }
+
+            const blob = new Blob([raw_data], { type: 'text/plain' }); // Create a Blob from the content
+            const url = URL.createObjectURL(blob); // Create a URL for the Blob
+
+            const a = document.createElement('a'); // Create a link element
+            a.href = url; // Set the href to the Blob URL
+            a.download = 'insta.db'; // Set the filename
+            document.body.appendChild(a); // Append the link to the document
+            a.click(); // Programmatically click the link to trigger the download
+            document.body.removeChild(a); // Clean up by removing the link
+            URL.revokeObjectURL(url); // Release the Blob URL
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        // Check if the Ctrl (or Cmd on Mac) key is pressed along with 'O'
+        if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
+            event.preventDefault(); // Prevent the default open behavior
+            document.getElementById('openDB').click();
+        }
+    });
+
+    function splitAtFirstSpace(str) {
+        const index = str.indexOf(' ');
+
+        // If there is no space, return the original string and an empty string
+        if (index === -1) {
+            return [str, ''];
+        }
+
+        // Split the string into two parts
+        const firstPart = str.substring(0, index);
+        const secondPart = str.substring(index + 1); // +1 to skip the space
+
+        return [firstPart, secondPart];
+    }
+
+    document.getElementById('openDB').addEventListener('change', function(event) {
+        const _file = event.target.files[0];
+
+        if (_file) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const lines = e.target.result.split('\n');
+
+                if (lines[0] === 'insta') {
+                    const images = document.getElementsByTagName('img');
+
+                    // Convert HTMLCollection to an array and loop through it
+                    Array.from(images).forEach(img => {
+                        img.remove(); // Remove each image
+                    });
+
+                    console.log("ok file");
+                    lines.pop();
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const [firstPart, secondPart] = splitAtFirstSpace(lines[i]);
+
+                        const img = document.createElement('img');
+                        img.src = firstPart;
+                        img.style.maxWidth = '100%'; // Make the image responsive
+                        img.style.height = 'auto';
+                        img.alt = secondPart;
+
+                        img.addEventListener('click', (event) => {
+                            let userInput = prompt("Please enter tags:", img.alt);
+                            if (userInput != null) {
+                                img.alt = userInput;
+                            }
+                        });
+
+                        document.body.appendChild(img);
+                    }
+                } else {
+                    console.log("wrong file");
+                }
+            };
+
+            reader.readAsText(_file);
+        }
+    });
+</script>
